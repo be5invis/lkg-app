@@ -16,9 +16,9 @@
 
 #include "scene.h"
 #include "clock.h"
-#include "pong.h"
-#include "graph.h"
-#include "tetris.h"
+// #include "pong.h"
+// #include "graph.h"
+// #include "tetris.h"
 
 int main()
 {
@@ -40,6 +40,7 @@ int main()
     
     //Load shaders
     Shader lkgFragment = LoadShaderSingleFile("./Shaders/quilt.shader"); // Quilt shader
+    Shader bloom = LoadShaderSingleFile("./Shaders/bloom.glsl"); // Quilt shader
 
     // Scene
     //Scene* scene = new PongScene();
@@ -71,6 +72,7 @@ int main()
     SetShaderValue(lkgFragment, tileLoc, tile, SHADER_UNIFORM_VEC2);
     
     // Render textures 8x6 (420x560)
+    RenderTexture2D bloomRT = LoadRenderTexture(tileRes.first * tiles.first, tileRes.second * tiles.second);
     RenderTexture2D quiltRT = LoadRenderTexture(tileRes.first * tiles.first, tileRes.second * tiles.second);
     const int TILE_WIDTH = tileRes.first;
     const int TILE_HEIGHT = tileRes.second;
@@ -84,7 +86,7 @@ int main()
     camera.fovy = 17.0f;
     camera.projection = CAMERA_PERSPECTIVE;
     
-    //SetTargetFPS(30);               // Set our viewer to run at 60 frames-per-second
+    SetTargetFPS(4);               // Set our viewer to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
     // Main loop
@@ -95,7 +97,7 @@ int main()
         
         // Draw
         //----------------------------------------------------------------------------------
-        BeginTextureMode(quiltRT);
+        BeginTextureMode(bloomRT);
             ClearBackground(scene->GetClearColor());
             for (int i = TILE_COUNT - 1; i >= 0; i--) {
                 rlViewport((i%(int)tile[0])*TILE_WIDTH, (floor(i/(int)tile[0]))*TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT);
@@ -113,6 +115,12 @@ int main()
                 rlPopMatrix();
                 EndMode3D();
             }
+        EndTextureMode();
+
+        BeginTextureMode(quiltRT);
+            BeginShaderMode(bloom);
+                DrawTextureRec(bloomRT.texture, (Rectangle){ 0, 0, (float)bloomRT.texture.width, (float)-bloomRT.texture.height }, (Vector2){ 0, 0 }, WHITE);
+            EndShaderMode();
         EndTextureMode();
 
         BeginDrawing();
@@ -133,7 +141,9 @@ int main()
     // De-Initialization
     //--------------------------------------------------------------------------------------
     UnloadRenderTexture(quiltRT);
+    UnloadRenderTexture(bloomRT);
     UnloadShader(lkgFragment);
+    UnloadShader(bloom);
 
     ClearDroppedFiles();
     CloseWindow();
